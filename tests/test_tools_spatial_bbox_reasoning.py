@@ -9,7 +9,7 @@ from hcaptcha_challenger import SpatialBboxReasoner
 from hcaptcha_challenger.helper import create_coordinate_grid, FloatRect
 
 dotenv.load_dotenv()
-gic = SpatialBboxReasoner(gemini_api_key=os.getenv("GEMINI_API_KEY"), model='gemini-2.5-flash')
+sbr = SpatialBboxReasoner(gemini_api_key=os.getenv("GEMINI_API_KEY"), model='gemini-2.5-flash')
 
 CHALLENGE_VIEW_DIR = Path(__file__).parent.joinpath("challenge_view/image_drag_drop")
 
@@ -24,7 +24,7 @@ async def test_gemini_bbox_reasoning():
     grid_divisions_image = create_coordinate_grid(challenge_screenshot, bbox)
     plt.imsave(str(grid_divisions_path.resolve()), grid_divisions_image)
 
-    results = await gic(
+    results = await sbr(
         challenge_screenshot=challenge_screenshot, grid_divisions=grid_divisions_path
     )
     logger.debug(f'ToolInvokeMessage: {results.log_message}')

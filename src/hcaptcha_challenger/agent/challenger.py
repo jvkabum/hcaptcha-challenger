@@ -188,7 +188,7 @@ class AgentConfig(BaseSettings):
         default=None, description="Path to custom skills rules.yaml"
     )
     enable_skills_update: bool = Field(
-        default=True, description="Enable auto-update of skills from GitHub"
+        default=False, description="Enable auto-update of skills from GitHub"
     )
     skills_update_repo: str = Field(
         default="QIN2DIM/hcaptcha-challenger", description="GitHub repo for skills update"

@@ -12,7 +12,7 @@ from hcaptcha_challenger.helper import create_coordinate_grid, FloatRect
 from hcaptcha_challenger.helper.visualize_attention_points import show_answer_points
 
 dotenv.load_dotenv()
-gic = SpatialPathReasoner(gemini_api_key=os.getenv("GEMINI_API_KEY"), model="gemini-3-pro-preview")
+spr = SpatialPathReasoner(gemini_api_key=os.getenv("GEMINI_API_KEY"), model="gemini-3-pro-preview")
 
 CHALLENGE_VIEW_DIR = Path(__file__).parent.joinpath("challenge_view/image_drag_drop")
 SHOW_ANSWER_DIR = Path(__file__).parent.joinpath("show_answer/image_drag_drop")
@@ -43,6 +43,7 @@ def _collect_image_files(input_dir: Path = CHALLENGE_VIEW_DIR) -> list[Path]:
     ]
 
 
+# noinspection DuplicatedCode
 @pytest.mark.parametrize("challenge_screenshot", _collect_image_files())
 async def test_gemini_path_reasoning(challenge_screenshot: Path):
     grid_divisions_path = challenge_screenshot.parent.joinpath(
@@ -53,7 +54,7 @@ async def test_gemini_path_reasoning(challenge_screenshot: Path):
     grid_divisions_image = create_coordinate_grid(challenge_screenshot, bbox)
     plt.imsave(str(grid_divisions_path.resolve()), grid_divisions_image)
 
-    results = await gic(
+    results = await spr(
         challenge_screenshot=challenge_screenshot, grid_divisions=grid_divisions_path
     )
     logger.debug(f'ToolInvokeMessage: {results.log_message}')
@@ -81,6 +82,7 @@ async def test_gemini_path_reasoning_concurrent():
     if not challenge_screenshots:
         pytest.skip("No challenge screenshots found")
 
+    # noinspection DuplicatedCode
     async def process_single_image(challenge_screenshot: Path):
         """Process a single challenge screenshot"""
         grid_divisions_path = challenge_screenshot.parent.joinpath(
@@ -91,14 +93,14 @@ async def test_gemini_path_reasoning_concurrent():
         grid_divisions_image = create_coordinate_grid(challenge_screenshot, bbox)
         plt.imsave(str(grid_divisions_path.resolve()), grid_divisions_image)
 
-        results = await gic(
+        results_ = await spr(
             challenge_screenshot=challenge_screenshot, grid_divisions=grid_divisions_path
         )
-        logger.debug(f'ToolInvokeMessage for {challenge_screenshot.name}: {results.log_message}')
+        logger.debug(f'ToolInvokeMessage for {challenge_screenshot.name}: {results_.log_message}')
 
         result = show_answer_points(
             challenge_screenshot,
-            results,
+            results_,
             bbox,
             show_plot=False,
             path_color='blue',
