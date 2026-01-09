@@ -188,23 +188,27 @@ class RoboticArm:
             log_msg = getattr(response, 'log_message', None)
             if log_msg:
                 if isinstance(log_msg, (dict, list)):
+                    if isinstance(log_msg, dict) and "Challenge Propt" in log_msg:
+                        log_msg["Challenge Prompt"] = log_msg.pop("Challenge Propt")
                     LoggerHelper.log_json(log_msg, title=title)
                 else:
                     import json
                     import re
                     msg = str(log_msg).strip()
-                    # Soul Alignment: Limpeza agressiva de ANSI e caracteres de controle (Portado do baseline premium)
-                    # Remove sequências de escape ANSI: \x1B[ ... m, etc.
+                    # 1. Sequências de escape ANSI tradicionais
                     msg = re.sub(r'\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])', '', msg)
-                    # Remove resíduos comuns de terminais mal formatados (ex: ;40m)
-                    msg = re.sub(r'\[?\d*(?:;\d+)*m', '', msg)
+                    # 2. Resíduos de códigos de cores sem prefixo (ex: [32m, ;40m, 0m)
+                    msg = re.sub(r'\[?\d+(?:;\d+)*m', '', msg)
                     # Remove caracteres de controle invisíveis
                     msg = "".join(ch for ch in msg if ord(ch) >= 32 or ch in "\n\r\t")
                     
                     if msg.startswith('{') or msg.startswith('['):
 
                         try:
-                            LoggerHelper.log_json(json.loads(msg), title=title)
+                            data = json.loads(msg)
+                            if isinstance(data, dict) and "Challenge Propt" in data:
+                                data["Challenge Prompt"] = data.pop("Challenge Propt")
+                            LoggerHelper.log_json(data, title=title)
                         except json.JSONDecodeError:
                             LoggerHelper.log_info(f"[{title}] {msg[:200]}...")
                     else:

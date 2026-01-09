@@ -143,28 +143,34 @@ class PilotNavigation:
         return screenshot_path, grid_path
 
     async def get_challenge_frame_locator(self) -> Optional[Frame]:
-        """Implementação da linha 155-195 do original: Busca exaustiva pelo frame de desafio."""
+        """Implementação otimizada: Busca exaustiva pelo frame de desafio sem esperas cegas."""
+        # Tenta uma espera curta inicial de forma não-bloqueante pesada
         try:
-            await self.page.wait_for_selector("iframe[src*='hcaptcha.com/captcha/v1/']", timeout=10000)
+            await self.page.wait_for_selector("iframe[src*='hcaptcha.com/captcha/v1/']", timeout=2000)
         except Exception: pass
 
-        for attempt in range(20):
+        for attempt in range(30): # Mais tentativas, mas mais rápidas
             candidate = self._find_frame_recursive(self.page.main_frame)
             if candidate:
                 with suppress(Exception):
-                    if await candidate.locator("//div[@class='challenge-view']").is_visible(timeout=1000):
+                    # Check visibility quickly
+                    if await candidate.locator("//div[@class='challenge-view']").is_visible(timeout=200):
                         return candidate
             
+            # Fallback por URL (mais rápido que recursão em alguns casos)
             for frame in self.page.frames:
                 if "hcaptcha.com/captcha/v1/" in frame.url and "frame=challenge" in frame.url:
                     with suppress(Exception):
-                        if await frame.locator("//div[@class='challenge-view']").is_visible(timeout=500):
+                        if await frame.locator("//div[@class='challenge-view']").is_visible(timeout=200):
                             return frame
             
-            if attempt % 5 == 0:
-                LoggerHelper.log_info(f"Procurando cockpit... {attempt+1}/20")
-            await asyncio.sleep(1)
+            if attempt % 10 == 0:
+                LoggerHelper.log_info(f"Procurando cockpit... {attempt+1}/30")
+            
+            # Sleep menor (250ms em vez de 1s) para ser mais responsivo
+            await asyncio.sleep(0.25)
         return None
+
 
     async def check_crumb_count(self) -> int:
         """Implementação da linha 245-250 do original: Conta as bolinhas do desafio."""
