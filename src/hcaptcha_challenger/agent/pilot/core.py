@@ -39,7 +39,16 @@ class PilotCore:
         self.image_cache = ImageCache()
         self.network_logger = NetworkLogger(interval_seconds=5.0)
         
+        # Soul Alignment: Evitar multiplicação de listeners em páginas reutilizadas (Singleton Browser)
+        # Portado da lógica de paridade: remove o handler anterior antes de registrar o novo
+        old_handler = getattr(self.page, "_h_handler", None)
+        if old_handler:
+            try:
+                self.page.remove_listener("response", old_handler)
+            except: pass
+        
         self.page.on("response", self.task_handler)
+        self.page._h_handler = self.task_handler
 
     async def task_handler(self, response: Response):
         self.network_logger.log_request()
@@ -104,10 +113,19 @@ class PilotCore:
                         await self.arm.navigation.refresh_challenge()
                         return None
 
-            # Keyword Overrides (Restored from 1,360 baseline)
-            drag_keywords = ["drag", "arraste", "puzzle", "segment", "position", "arraste-o", "mova", "coloca", "piece", "line", "slot"]
-            if any(k in prompt for k in drag_keywords):
-                LoggerHelper.log_info(f"Override: Arraste detectado por palavra-chave: '{prompt}'", emoji='target')
+            # Keyword Overrides (Soul Alignment: Refined to avoid leakage)
+            # Apenas substitui se o prompt for EXTREMAMENTE específico ou se o tipo original for ambíguo
+            drag_keywords = ["drag", "arraste", "puzzle", "segment", "arraste-o", "mova", "piece"]
+            
+            # Se já for um tipo de drag conhecido pela rede, não precisamos de override pro básico
+            is_already_drag = payload.request_type in [RequestType.IMAGE_DRAG_DROP]
+            
+            if any(k in prompt for k in drag_keywords) or is_already_drag:
+                # Se detectado por palavra-chave mas o tipo é visualmente outro (ex: select), logar aviso
+                if payload.request_type not in [RequestType.IMAGE_DRAG_DROP] and not is_already_drag:
+                    LoggerHelper.log_warning(f"Override agressivo detectado: '{prompt}' (Tipo real: {payload.request_type})", emoji='⚠️')
+                
+                LoggerHelper.log_info(f"Roteamento: Arraste detectado: '{prompt}'", emoji='target')
                 self.arm.crumb_count = len(payload.tasklist)
                 try: 
                     return ChallengeTypeEnum.IMAGE_DRAG_SINGLE if len(payload.tasklist[0].entities) == 1 else ChallengeTypeEnum.IMAGE_DRAG_MULTI

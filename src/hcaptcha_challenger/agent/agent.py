@@ -53,11 +53,17 @@ class AgentV:
         self.challenge_attempts = 0
         self.last_payload = None
         
-        # Limpar filas
+        # Soul Alignment: Resetar payload do braço robótico para evitar vazamento entre sessões
+        self.arm.captcha_payload = None
+        
+        # Limpar filas (Portabilidade Premium: Garante que não há lixo radioativo no pipeline)
         while not self.core.captcha_response_queue.empty():
-            self.core.captcha_response_queue.get_nowait()
+            try: self.core.captcha_response_queue.get_nowait()
+            except: break
+            
         while not self.core.captcha_payload_queue.empty():
-            self.core.captcha_payload_queue.get_nowait()
+            try: self.core.captcha_payload_queue.get_nowait()
+            except: break
         
         start_time_total = time.time()
         LoggerHelper.log_info("🚀 INICIANDO NOVA SESSÃO (Estado resetado)", emoji='🔄')
